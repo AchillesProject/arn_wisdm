@@ -1,0 +1,1 @@
+python main_cnc.py --output_dir loggings --data_class tsra --pattern TRAIN --val_pattern TEST --epochs 100 --lr 0.001 --optimizer RAdam  --pos_encoding learnable --task regression

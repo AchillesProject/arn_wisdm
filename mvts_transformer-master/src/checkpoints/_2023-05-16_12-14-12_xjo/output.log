@@ -1,0 +1,109 @@
+Running:
+main_cnc.py --output_dir checkpoints --data_class tsra --pattern TRAIN --val_pattern TEST --epochs 100 --lr 0.001 --optimizer RAdam --pos_encoding learnable --task regression
+
+Using device: cuda
+Creating model ...
+Model:
+TSTransformerEncoderClassiregressor(
+  (project_inp): Linear(in_features=33, out_features=64, bias=True)
+  (pos_enc): LearnablePositionalEncoding(
+    (dropout): Dropout(p=0.1, inplace=False)
+  )
+  (transformer_encoder): TransformerEncoder(
+    (layers): ModuleList(
+      (0): TransformerBatchNormEncoderLayer(
+        (self_attn): MultiheadAttention(
+          (out_proj): NonDynamicallyQuantizableLinear(in_features=64, out_features=64, bias=True)
+        )
+        (linear1): Linear(in_features=64, out_features=256, bias=True)
+        (dropout): Dropout(p=0.1, inplace=False)
+        (linear2): Linear(in_features=256, out_features=64, bias=True)
+        (norm1): BatchNorm1d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (norm2): BatchNorm1d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (dropout1): Dropout(p=0.1, inplace=False)
+        (dropout2): Dropout(p=0.1, inplace=False)
+      )
+      (1): TransformerBatchNormEncoderLayer(
+        (self_attn): MultiheadAttention(
+          (out_proj): NonDynamicallyQuantizableLinear(in_features=64, out_features=64, bias=True)
+        )
+        (linear1): Linear(in_features=64, out_features=256, bias=True)
+        (dropout): Dropout(p=0.1, inplace=False)
+        (linear2): Linear(in_features=256, out_features=64, bias=True)
+        (norm1): BatchNorm1d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (norm2): BatchNorm1d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (dropout1): Dropout(p=0.1, inplace=False)
+        (dropout2): Dropout(p=0.1, inplace=False)
+      )
+      (2): TransformerBatchNormEncoderLayer(
+        (self_attn): MultiheadAttention(
+          (out_proj): NonDynamicallyQuantizableLinear(in_features=64, out_features=64, bias=True)
+        )
+        (linear1): Linear(in_features=64, out_features=256, bias=True)
+        (dropout): Dropout(p=0.1, inplace=False)
+        (linear2): Linear(in_features=256, out_features=64, bias=True)
+        (norm1): BatchNorm1d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (norm2): BatchNorm1d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (dropout1): Dropout(p=0.1, inplace=False)
+        (dropout2): Dropout(p=0.1, inplace=False)
+      )
+    )
+  )
+  (dropout1): Dropout(p=0.1, inplace=False)
+  (output_layer): Linear(in_features=2560, out_features=1, bias=True)
+)
+Total number of parameters: 157249
+Trainable parameters: 157249
+Evaluating on validation set ...
+Validation runtime: 0.0 hours, 0.0 minutes, 2.21885347366333 seconds
+
+Avg val. time: 0.0 hours, 0.0 minutes, 2.21885347366333 seconds
+Avg batch val. time: 0.034136207287128156 seconds
+Avg sample val. time: 0.0005394732491279674 seconds
+Epoch 0 Validation Summary: epoch: 0.000000 | loss: 9.954197 | 
+Starting training...
+Epoch 1 Training Summary: epoch: 1.000000 | loss: 0.214570 | 
+Epoch runtime: 0.0 hours, 0.0 minutes, 7.714359283447266 seconds
+
+Avg epoch train. time: 0.0 hours, 0.0 minutes, 7.714359283447266 seconds
+Avg batch train. time: 0.01497933841446071 seconds
+Avg sample train. time: 0.00023436502866226958 seconds
+Evaluating on validation set ...
+Validation runtime: 0.0 hours, 0.0 minutes, 0.3509945869445801 seconds
+
+Avg val. time: 0.0 hours, 0.0 minutes, 1.284924030303955 seconds
+Avg batch val. time: 0.01976806200467623 seconds
+Avg sample val. time: 0.00031240555076682595 seconds
+Epoch 1 Validation Summary: epoch: 1.000000 | loss: 0.168383 | 
+Epoch 2 Training Summary: epoch: 2.000000 | loss: 0.071836 | 
+Epoch runtime: 0.0 hours, 0.0 minutes, 7.723904132843018 seconds
+
+Avg epoch train. time: 0.0 hours, 0.0 minutes, 7.719131708145142 seconds
+Avg batch train. time: 0.014988605258534255 seconds
+Avg sample train. time: 0.0002345100166528479 seconds
+Evaluating on validation set ...
+Validation runtime: 0.0 hours, 0.0 minutes, 0.2790699005126953 seconds
+
+Avg val. time: 0.0 hours, 0.0 minutes, 0.9496393203735352 seconds
+Avg batch val. time: 0.014609835698054387 seconds
+Avg sample val. time: 0.00023088726486105888 seconds
+Epoch 2 Validation Summary: epoch: 2.000000 | loss: 0.109492 | 
+Epoch 3 Training Summary: epoch: 3.000000 | loss: 0.049921 | 
+Epoch runtime: 0.0 hours, 0.0 minutes, 7.728897571563721 seconds
+
+Avg epoch train. time: 0.0 hours, 0.0 minutes, 7.722386995951335 seconds
+Avg batch train. time: 0.014994926205730747 seconds
+Avg sample train. time: 0.00023460891347525017 seconds
+Epoch 4 Training Summary: epoch: 4.000000 | loss: 0.044570 | 
+Epoch runtime: 0.0 hours, 1.0 minutes, 22.550146102905273 seconds
+
+Avg epoch train. time: 0.0 hours, 0.0 minutes, 26.42932677268982 seconds
+Avg batch train. time: 0.05131908111201907 seconds
+Avg sample train. time: 0.0008029325183099349 seconds
+Evaluating on validation set ...
+Validation runtime: 0.0 hours, 0.0 minutes, 0.2745707035064697 seconds
+
+Avg val. time: 0.0 hours, 0.0 minutes, 0.7808721661567688 seconds
+Avg batch val. time: 0.012013417940873366 seconds
+Avg sample val. time: 0.00018985464774052245 seconds
+Epoch 4 Validation Summary: epoch: 4.000000 | loss: 0.023876 | 
