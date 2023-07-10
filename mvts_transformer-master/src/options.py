@@ -87,6 +87,8 @@ class Options(object):
                                  help='Sub-sampling factor used for long sequences: keep every kth sample')
         self.parser.add_argument('--num_features', type=int, default=33,
                                  help='Sub-sampling factor used for long sequences: keep every kth sample')
+        self.parser.add_argument('--file_no', type=int, default=1,
+                                 help='WISDM train/test file number. [1-30]')
         # Training process
         self.parser.add_argument('--task', choices={"imputation", "transduction", "classification", "regression"},
                                  default="imputation",
