@@ -1,7 +1,7 @@
 import numpy as np
 from torch.utils.data import Dataset
 import torch
-
+import sys
 
 class ImputationDataset(Dataset):
     """Dynamically computes missingness (noise) mask for each sample"""
@@ -81,8 +81,6 @@ class TransductionDataset(Dataset):
 
     def __len__(self):
         return len(self.IDs)
-
-
 def collate_superv(data, max_len=None):
     """Build mini-batch tensors from a list of (X, mask) tuples. Mask input. Create
     Args:
@@ -102,23 +100,21 @@ def collate_superv(data, max_len=None):
 
     batch_size = len(data)
     features, labels, IDs = zip(*data)
-
     # Stack and pad features and masks (convert 2D to 3D tensors, i.e. add batch dimension)
     lengths = [X.shape[0] for X in features]  # original sequence length for each time series
     if max_len is None:
         max_len = max(lengths)
+    
     X = torch.zeros(batch_size, max_len, features[0].shape[-1])  # (batch_size, padded_length, feat_dim)
     for i in range(batch_size):
         end = min(lengths[i], max_len)
         X[i, :end, :] = features[i][:end, :]
 
     targets = torch.stack(labels, dim=0)  # (batch_size, num_labels)
-
-    padding_masks = padding_mask(torch.tensor(lengths, dtype=torch.int16),
-                                 max_len=max_len)  # (batch_size, padded_length) boolean tensor, "1" means keep
-
+    
+    # print(batch_size, max_len, features[0].shape[-1], lengths, targets.size())
+    padding_masks = padding_mask(torch.tensor(lengths, dtype=torch.int16), max_len=max_len)  # (batch_size, padded_length) boolean tensor, "1" means keep
     return X, targets, padding_masks, IDs
-
 
 class ClassiregressionDataset(Dataset):
 
@@ -127,9 +123,14 @@ class ClassiregressionDataset(Dataset):
 
         self.data = data  # this is a subclass of the BaseData class in data.py
         self.IDs = indices  # list of data IDs, but also mapping between integer index and ID
-        self.feature_df = self.data.feature_df.loc[self.IDs]
-
-        self.labels_df = self.data.labels_df.loc[self.IDs]
+        
+        # self.feature_df = self.data.feature_df.loc[self.IDs] #original code
+        # self.labels_df = self.data.labels_df.loc[self.IDs] #original code
+        
+        self.feature_df = self.data.feature_df.loc[np.unique(self.IDs).tolist()] # modify for wisdm dataset
+        self.labels_df = self.data.labels_df.loc[np.unique(self.IDs).tolist()]   # modify for wisdm dataset
+        print(self.feature_df.shape)
+        print(self.labels_df.shape)
 
     def __getitem__(self, ind):
         """
@@ -144,9 +145,7 @@ class ClassiregressionDataset(Dataset):
 
         X = self.feature_df.loc[self.IDs[ind]].values  # (seq_length, feat_dim) array
         y = self.labels_df.loc[self.IDs[ind]].values  # (num_labels,) array
-
-        #print("HELLLOOOOOOOO", X.shape, y.shape, self.IDs.shape, self.IDs[ind], ind)
-
+        # print(ind, self.IDs[ind], X.shape, y.shape)
         return torch.from_numpy(X), torch.from_numpy(y), self.IDs[ind] #self.IDs[ind] and ind are the same
 
     def __len__(self):
@@ -228,7 +227,7 @@ def collate_unsuperv(data, max_len=None, mask_compensation=False):
     if mask_compensation:
         X = compensate_masking(X, target_masks)
 
-    padding_masks = padding_mask(torch.tensor(lengths, dtype=torch.int16), max_len=max_len)  # (batch_size, padded_length) boolean tensor, "1" means keep
+    padding_masks = padding_mask(torch.tensor(lengths, dtype=torch.float), max_len=max_len)  # (batch_size, padded_length) boolean tensor, "1" means keep
     target_masks = ~target_masks  # inverse logic: 0 now means ignore, 1 means predict
     return X, targets, target_masks, padding_masks, IDs
 
@@ -307,7 +306,4 @@ def padding_mask(lengths, max_len=None):
     """
     batch_size = lengths.numel()
     max_len = max_len or lengths.max_val()  # trick works because of overloading of 'or' operator for non-boolean types
-    return (torch.arange(0, max_len, device=lengths.device)
-            .type_as(lengths)
-            .repeat(batch_size, 1)
-            .lt(lengths.unsqueeze(1)))
+    return (torch.arange(0, max_len, device=lengths.device).type_as(lengths).repeat(batch_size, 1).lt(lengths.unsqueeze(1)))

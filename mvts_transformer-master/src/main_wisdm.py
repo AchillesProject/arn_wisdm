@@ -56,11 +56,34 @@ def main(config):
     device = torch.device('cuda' if (torch.cuda.is_available() and config['gpu'] != '-1') else 'cpu')
     logger.info("Using device: {}".format(device))
     logger.info("Device index: {}".format(torch.cuda.current_device())) if device == 'cuda' else None
+    
+    # Train Data
+    logger.info("Loading and preprocessing data ...")
+    data_class    = data_factory[config['data_class']]
+    filepath  = f"../datasets/wisdm/run{config['wisdm_file_no']}"
+    config['data_dir'] = filepath
+    train_data    = data_class(config['data_dir'], pattern='TRAIN', n_proc=config['n_proc'], limit_size=config['limit_size'], config=config)
+    train_indices = train_data.all_IDs
+    feat_dim      = train_data.feature_df.shape[1]  # dimensionality of data features
 
+    # Test Data
+    test_data = data_class(config['data_dir'], pattern='TEST', n_proc=-1, config=config)
+    test_indices = test_data.all_IDs
 
+    logger.info("{} samples may be used for training".format(len(train_indices)))
+    logger.info("{} samples will be used for testing".format(len(test_indices)))
+    
+    with open(os.path.join(config['output_dir'], 'data_indices.json'), 'w') as f:
+        try:
+            json.dump({'train_indices': list(map(int, train_indices)),
+                       'test_indices': list(map(int, test_indices))}, f, indent=4)
+        except ValueError:  # in case indices are non-integers
+            json.dump({'train_indices': list(train_indices),
+                       'test_indices': list(test_indices)}, f, indent=4)
+            
     # Create model
     logger.info("Creating model ...")
-    model = model_factory(config, None)
+    model = model_factory(config, train_data)
 
     if config['freeze']:
         for name, param in model.named_parameters():
@@ -100,30 +123,26 @@ def main(config):
     loss_module = get_loss_module(config)
     
     # Initialize data generators
-    filepath  = f"../datasets/wisdm/run{config['file_no']}"
-    trainFile = f"train{config['file_no']}.csv"
-    testFile   = f"test{config['file_no']}.csv"
-    
-    train_data  = WISDMDataset(file_path=os.path.join(filepath, trainFile))
-    test_data   = WISDMDataset(file_path=os.path.join(filepath, testFile))
-    
-    train_loader = DataLoader(dataset=train_data,
+    dataset_class, collate_fn, runner_class = pipeline_factory(config)
+    train_dataset = dataset_class(train_data, train_indices)
+    # print(train_dataset.__getitem__(0))
+    train_loader = DataLoader(dataset=train_dataset,
                               batch_size=config['batch_size'],
                               shuffle=False,
                               num_workers=config['num_workers'],
                               pin_memory=True,
                               collate_fn=lambda x: collate_superv(x, max_len=model.max_len))
-    test_loader  = DataLoader(dataset=test_data,
-                            batch_size=config['batch_size'],
-                            shuffle=False,
-                            num_workers=config['num_workers'],
-                            pin_memory=True,
-                            collate_fn=lambda x: collate_superv(x, max_len=model.max_len))
-
+    train_dataset = dataset_class(test_data, test_indices)
+    test_loader  = DataLoader(dataset=train_dataset,
+                              batch_size=config['batch_size'],
+                              shuffle=False,
+                              num_workers=config['num_workers'],
+                              pin_memory=True,
+                              collate_fn=lambda x: collate_superv(x, max_len=model.max_len))
     dataset_class, collate_fn, runner_class = pipeline_factory(config)
-    trainer        = runner_class(model, train_loader, device, loss_module, optimizer, l2_reg=output_reg,
+    trainer = runner_class(model, train_loader, device, loss_module, optimizer, l2_reg=output_reg,
                                  print_interval=config['print_interval'], console=config['console'])
-    test_evaluator = runner_class(model, test_loader, device, loss_module,
+    tester  = runner_class(model, test_loader, device, loss_module,
                                  print_interval=config['print_interval'], console=config['console'])
 
     tensorboard_writer = SummaryWriter(config['tensorboard_dir'])
@@ -133,7 +152,7 @@ def main(config):
     best_metrics = {}
 
     # Evaluate on validation before training
-    aggr_metrics_val, best_metrics, best_value = validate(test_evaluator, tensorboard_writer, config, best_metrics,
+    aggr_metrics_val, best_metrics, best_value = validate(tester, tensorboard_writer, config, best_metrics,
                                                           best_value, epoch=0)
     metrics_names, metrics_values = zip(*aggr_metrics_val.items())
     metrics.append(list(metrics_values))
@@ -207,4 +226,5 @@ if __name__ == '__main__':
 
     args = Options().parse()  # `argsparse` object
     config = setup(args)  # configuration dictionary
+    print(config)
     main(config)

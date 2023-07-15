@@ -377,7 +377,6 @@ class UnsupervisedRunner(BaseRunner):
 
 
 class SupervisedRunner(BaseRunner):
-
     def __init__(self, *args, **kwargs):
 
         super(SupervisedRunner, self).__init__(*args, **kwargs)
@@ -389,7 +388,6 @@ class SupervisedRunner(BaseRunner):
             self.classification = False
 
     def train_epoch(self, epoch_num=None):
-
         self.model = self.model.train()
 
         epoch_loss = 0  # total loss of epoch
@@ -445,13 +443,11 @@ class SupervisedRunner(BaseRunner):
 
         per_batch = {'target_masks': [], 'targets': [], 'predictions': [], 'metrics': [], 'IDs': []}
         for i, batch in enumerate(self.dataloader):
-
             X, targets, padding_masks, IDs = batch
             targets = targets.to(self.device).type(torch.cuda.FloatTensor)
             padding_masks = padding_masks.to(self.device)  # 0s: ignore
             # regression: (batch_size, num_labels); classification: (batch_size, num_classes) of logits
             predictions = self.model(X.to(self.device), padding_masks)
-
             loss = self.loss_module(predictions, targets).type(torch.cuda.FloatTensor)  # (batch_size,) loss for each sample in the batch
             batch_loss = torch.sum(loss).cpu().item()
             mean_loss = batch_loss / len(loss)  # mean loss (over samples)

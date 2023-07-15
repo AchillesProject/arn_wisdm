@@ -9,7 +9,7 @@ from torch.nn.modules import MultiheadAttention, Linear, Dropout, BatchNorm1d, T
 
 def model_factory(config, data):
     task = config['task']
-    feat_dim = config['num_features']#data.feature_df.shape[1] #config['num_features']  # dimensionality of data features
+    feat_dim = data.feature_df.shape[1] #config['num_features']  # dimensionality of data features
     # data windowing is used when samples don't have a predefined length or the length is too long
     max_seq_len = config['data_window_len'] if config['data_window_len'] is not None else config['max_seq_len']
     if max_seq_len is None:
@@ -32,7 +32,8 @@ def model_factory(config, data):
                                         norm=config['normalization_layer'], freeze=config['freeze'])
 
     if (task == "classification") or (task == "regression"):
-        num_labels = config['num_classes']
+        num_labels = len(data.class_names) if task == "classification" else data.labels_df.shape[1]  # dimensionality of labels
+        print('class_names', num_labels)
         if config['model'] == 'LINEAR':
             return DummyTSTransformerEncoderClassiregressor(feat_dim, max_seq_len, config['d_model'],
                                                             config['num_heads'],
@@ -168,14 +169,15 @@ class TransformerBatchNormEncoderLayer(nn.modules.Module):
         super(TransformerBatchNormEncoderLayer, self).__setstate__(state)
 
     def forward(self, src: Tensor, src_mask: Optional[Tensor] = None,
-                src_key_padding_mask: Optional[Tensor] = None) -> Tensor:
+                src_key_padding_mask: Optional[Tensor] = None,
+                is_causal: bool = False) -> Tensor:
         r"""Pass the input through the encoder layer.
 
         Args:
             src: the sequence to the encoder layer (required).
             src_mask: the mask for the src sequence (optional).
             src_key_padding_mask: the mask for the src keys per batch (optional).
-
+            is_causal: If specified, applies a causal mask as src_mask [default: False] - Not Used and not implemented yet.
         Shape:
             see the docs in Transformer class.
         """
