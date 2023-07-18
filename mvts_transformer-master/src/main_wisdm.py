@@ -190,7 +190,7 @@ def main(config):
 
     logger.info('Starting training...')
     
-    for epoch in tqdm(range(start_epoch + 1, config["epochs"] + 1), desc='Training Epoch', leave=False):
+    for int(epoch) in tqdm(range(start_epoch + 1, config["epochs"] + 1), desc='Training Epoch', leave=False):
         mark = epoch if config['save_all'] else 'last'
         epoch_start_time = time.time()
         aggr_metrics_train = trainer.train_epoch(epoch)  # dictionary of aggregate epoch metrics
