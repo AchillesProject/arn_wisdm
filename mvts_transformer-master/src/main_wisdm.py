@@ -59,7 +59,8 @@ def main(config):
     logger.info("Loading and preprocessing data ...")
     data_class         = data_factory[config['data_class']]
     config['data_dir'] = f"{config['data_dir']}/run{config['wisdm_file_no']}"
-    
+    lr_T = float(config['wisdm_decayDuration'])*float(int(config['wisdm_numTrainingSteps'])/int(config['batch_size'])) # total steps
+    print(config['epochs'], lr_T)
     # Train Data
     train_data    = data_class(config['data_dir'], pattern='TRAIN', n_proc=config['n_proc'], limit_size=config['limit_size'], config=config)
     train_indices = train_data.all_IDs
@@ -122,7 +123,7 @@ def main(config):
     start_epoch = 0
     lr_step = 0  # current step index of `lr_step`
     lr = config['wisdm_lr0']  # initial learning rate (lr0)
-    lr_T = int(config['wisdm_decayDuration'])*float(int(config['wisdm_numTrainingSteps'])/int(config['batch_size'])) # total timesteps
+    
     config["epochs"]   = int(math.floor(int(config['wisdm_numTrainingSteps'])*int(config['data_window_len']) / len(train_indices)))
     print(config['epochs'], lr_T)
     # Load model and optimizer state
