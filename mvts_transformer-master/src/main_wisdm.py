@@ -116,18 +116,20 @@ def main(config):
         output_reg = config['l2_reg']
 
     optim_class = get_optimizer(config['optimizer'])
-    optimizer   = optim_class(model.parameters(), lr=config['lr'], weight_decay=weight_decay)
+    optimizer   = optim_class(model.parameters(), lr=config['wisdm_lr0'], weight_decay=weight_decay, 
+                              betas = (config['wisdm_beta1'], config['wisdm_beta2']), eps = config['wisdm_epsilon']) #adding for wisdm dataset
 
     start_epoch = 0
     lr_step = 0  # current step index of `lr_step`
-    lr = config['lr']  # current learning step
-    config["epochs"]   = math.floor(int(config['wisdm_numTrainingSteps'])*int(config['data_window_len']) / len(train_indices))
-    print(config['epochs'])
+    lr = config['wisdm_lr0']  # initial learning rate (lr0)
+    lr_T = config['wisdm_decayDuration']*(config['wisdm_numTrainingSteps']/ config['batchSize']) # total timesteps
+    config["epochs"]   = int(math.floor(int(config['wisdm_numTrainingSteps'])*int(config['data_window_len']) / len(train_indices)))
+    print(config['epochs'], lr_T)
     # Load model and optimizer state
     if args.load_model:
         model, optimizer, start_epoch = utils.load_model(model, config['load_model'], optimizer, config['resume'],
                                                          config['change_output'],
-                                                         config['lr'],
+                                                         config['wisdm_lr0'],
                                                          config['lr_step'],
                                                          config['lr_factor'])
     model.to(device)
@@ -187,15 +189,16 @@ def main(config):
     metrics.append(list(metrics_values))
 
     logger.info('Starting training...')
+    
     for epoch in tqdm(range(start_epoch + 1, config["epochs"] + 1), desc='Training Epoch', leave=False):
         mark = epoch if config['save_all'] else 'last'
         epoch_start_time = time.time()
         aggr_metrics_train = trainer.train_epoch(epoch)  # dictionary of aggregate epoch metrics
         epoch_runtime = time.time() - epoch_start_time
         print()
-        print_str = 'Epoch {} Training Summary: '.format(epoch)
+        print_str = f'Epoch {epoch} Training Summary: '
         for k, v in aggr_metrics_train.items():
-            tensorboard_writer.add_scalar('{}/train'.format(k), v, epoch)
+            tensorboard_writer.add_scalar(f'{k}/train', v, epoch)
             print_str += '{}: {:8f} | '.format(k, v)
         logger.info(print_str)
         logger.info("Epoch runtime: {} hours, {} minutes, {} seconds\n".format(*utils.readable_time(epoch_runtime)))
@@ -217,14 +220,23 @@ def main(config):
         utils.save_model(os.path.join(config['save_dir'], 'model_{}.pth'.format(mark)), epoch, model, optimizer)
 
         # Learning rate scheduling
-        if epoch == config['lr_step'][lr_step]:
-            utils.save_model(os.path.join(config['save_dir'], 'model_{}.pth'.format(epoch)), epoch, model, optimizer)
-            lr = lr * config['lr_factor'][lr_step]
-            if lr_step < len(config['lr_step']) - 1:  # so that this index does not get out of bounds
-                lr_step += 1
-            logger.info('Learning rate updated to: ', lr)
+        if config['wisdm_is_lr_scheduling']:
+            if (epoch > lr_T):
+                lr = config['wisdm_lrDecay'] * config['wisdm_lr0']
+            else:
+                lr = config['wisdm_lr0'] - (1.0-config['wisdm_lrDecay'])*config['wisdm_lr0']*epoch/lr_T
+            logger.info('[WISDM ] Learning rate updated to: ', lr)
             for param_group in optimizer.param_groups:
                 param_group['lr'] = lr
+        else:
+            if epoch == config['lr_step'][lr_step]:
+                utils.save_model(os.path.join(config['save_dir'], 'model_{}.pth'.format(epoch)), epoch, model, optimizer)
+                lr = lr * config['lr_factor'][lr_step]
+                if lr_step < len(config['lr_step']) - 1:  # so that this index does not get out of bounds
+                    lr_step += 1
+                logger.info('Learning rate updated to: ', lr)
+                for param_group in optimizer.param_groups:
+                    param_group['lr'] = lr
 
         # Difficulty scheduling
         if config['harden'] and check_progress(epoch):

@@ -175,6 +175,8 @@ class Options(object):
         ### WISDM Dataset (added by Chau Tran [HIOF/IFE])
         self.parser.add_argument('--wisdm_file_no', type=int, default=1,
                                  help='[WISDM Dataset] Train/test file number. [1-30]')
+        self.parser.add_argument('--wisdm_is_lr_scheduling', type=int, default=0,
+                                 help='[WISDM Dataset] Indicate whether the wisdm learning rate schedule is applied or not [0-No and 1-Yes].')
         self.parser.add_argument('--wisdm_numTrainingSteps', type=int, default=320000,
                                  help='[WISDM Dataset] Total number of training steps. It is used for calculating the epochs number when training WISDM dataset.' )
         self.parser.add_argument('--wisdm_beta1', type=float, default=0.974833,
@@ -185,10 +187,10 @@ class Options(object):
                                  help='[WISDM Dataset] Variables of learning scheduler.')
         self.parser.add_argument('--wisdm_lr0', type=float, default=0.002798,
                                  help='[WISDM Dataset] Initial learning rate of learning scheduler.')
-        self.parser.add_argument('--wisdm_decayDurationFactor', type=float, default=0.979079,
-                                 help='[WISDM Dataset] Variables of learning scheduler.')
-        self.parser.add_argument('--wisdm_learningRateDecay', type=float, default=0.001025,
-                                 help='[WISDM Dataset] Train/test file number. [1-30]')
+        self.parser.add_argument('--wisdm_decayDuration', type=float, default=0.979079,
+                                 help='[WISDM Dataset] Decay Duration Factor.')
+        self.parser.add_argument('--wisdm_lrDecay', type=float, default=0.001025,
+                                 help='[WISDM Dataset] Learning Rate Decay factor.')
 
     def parse(self):
 

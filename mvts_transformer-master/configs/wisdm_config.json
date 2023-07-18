@@ -15,11 +15,13 @@
 	"batch_size": 100, 
 	"epochs": 100,
 	"lr": 0.001,
+	"l2_reg": 0,
+	"wisdm_is_lr_scheduling": 1,
 	"wisdm_beta1": 0.974833,
 	"wisdm_beta2": 0.996890,
 	"wisdm_epsilon": 0.003880,
-	"wisdm_decayDurationFactor": 0.979079,
+	"wisdm_decayDuration": 0.979079,
 	"wisdm_lr0": 0.002798,
-	"wisdm_learningRateDecay": 0.001025,
+	"wisdm_lrDecay": 0.001025,
 	"dropout": 0
 }
