@@ -18,6 +18,7 @@ import sys
 import time
 import pickle
 import json
+import math
 
 # 3rd party packages
 from tqdm import tqdm
@@ -50,37 +51,46 @@ def main(config):
     logger.addHandler(file_handler)
 
     logger.info('Running:\n{}\n'.format(' '.join(sys.argv)))  # command used to run
-
     torch.manual_seed(config['seed']) if config['seed'] is not None else None
-
     device = torch.device('cuda' if (torch.cuda.is_available() and config['gpu'] != '-1') else 'cpu')
     logger.info("Using device: {}".format(device))
     logger.info("Device index: {}".format(torch.cuda.current_device())) if device == 'cuda' else None
     
-    # Train Data
     logger.info("Loading and preprocessing data ...")
-    data_class    = data_factory[config['data_class']]
-    filepath  = f"../datasets/wisdm/run{config['wisdm_file_no']}"
-    config['data_dir'] = filepath
+    data_class         = data_factory[config['data_class']]
+    config['data_dir'] = f"{config['data_dir']}/run{config['wisdm_file_no']}"
+    
+    # Train Data
     train_data    = data_class(config['data_dir'], pattern='TRAIN', n_proc=config['n_proc'], limit_size=config['limit_size'], config=config)
     train_indices = train_data.all_IDs
-    feat_dim      = train_data.feature_df.shape[1]  # dimensionality of data features
-
+    # Val Data (same with test data)
+    val_data    = data_class(config['data_dir'], pattern='TEST', n_proc=-1, config=config)
+    val_indices = val_data.all_IDs
     # Test Data
-    test_data = data_class(config['data_dir'], pattern='TEST', n_proc=-1, config=config)
+    test_data    = data_class(config['data_dir'], pattern='TEST', n_proc=-1, config=config)
     test_indices = test_data.all_IDs
-
+    
     logger.info("{} samples may be used for training".format(len(train_indices)))
+    logger.info("{} samples will be used for validating".format(len(val_indices)))
     logger.info("{} samples will be used for testing".format(len(test_indices)))
     
     with open(os.path.join(config['output_dir'], 'data_indices.json'), 'w') as f:
         try:
             json.dump({'train_indices': list(map(int, train_indices)),
+                       'val_indices': list(map(int, val_indices)),
                        'test_indices': list(map(int, test_indices))}, f, indent=4)
         except ValueError:  # in case indices are non-integers
             json.dump({'train_indices': list(train_indices),
+                       'val_indices': list(val_indices),
                        'test_indices': list(test_indices)}, f, indent=4)
-            
+    
+    # Pre-process features
+    if config['normalization'] is not None:
+        normalizer = Normalizer(config['normalization'])
+        train_data.feature_df.loc[train_indices] = normalizer.normalize(train_data.feature_df.loc[train_indices])
+        val_data.feature_df.loc[val_indices]   = normalizer.normalize(val_data.feature_df.loc[val_indices])
+        test_data.feature_df.loc[test_indices]   = normalizer.normalize(test_data.feature_df.loc[test_indices])
+
     # Create model
     logger.info("Creating model ...")
     model = model_factory(config, train_data)
@@ -111,6 +121,8 @@ def main(config):
     start_epoch = 0
     lr_step = 0  # current step index of `lr_step`
     lr = config['lr']  # current learning step
+    config["epochs"]   = math.floor(int(config['wisdm_numTrainingSteps'])*int(config['data_window_len']) / len(train_indices))
+    print(config['epochs'])
     # Load model and optimizer state
     if args.load_model:
         model, optimizer, start_epoch = utils.load_model(model, config['load_model'], optimizer, config['resume'],
@@ -121,28 +133,45 @@ def main(config):
     model.to(device)
 
     loss_module = get_loss_module(config)
+    if config['test_only'] == 'testset':  # Only evaluate and skip training
+        dataset_class, collate_fn, runner_class = pipeline_factory(config)
+        test_dataset = dataset_class(test_data, test_indices)
+
+        test_loader = DataLoader(dataset=test_dataset,
+                                 batch_size=config['batch_size'],
+                                 shuffle=False,
+                                 num_workers=config['num_workers'],
+                                 pin_memory=True,
+                                 collate_fn=lambda x: collate_fn(x, max_len=model.max_len))
+        test_evaluator = runner_class(model, test_loader, device, loss_module,
+                                            print_interval=config['print_interval'], console=config['console'])
+        aggr_metrics_test, per_batch_test = test_evaluator.evaluate(keep_all=True)
+        print_str = 'Test Summary: '
+        for k, v in aggr_metrics_test.items():
+            print_str += '{}: {:8f} | '.format(k, v)
+        logger.info(print_str)
+        return
     
     # Initialize data generators
     dataset_class, collate_fn, runner_class = pipeline_factory(config)
     train_dataset = dataset_class(train_data, train_indices)
-    # print(train_dataset.__getitem__(0))
     train_loader = DataLoader(dataset=train_dataset,
                               batch_size=config['batch_size'],
                               shuffle=False,
                               num_workers=config['num_workers'],
                               pin_memory=True,
                               collate_fn=lambda x: collate_superv(x, max_len=model.max_len))
-    train_dataset = dataset_class(test_data, test_indices)
-    test_loader  = DataLoader(dataset=train_dataset,
+    val_dataset = dataset_class(val_data, val_indices)
+    val_loader  = DataLoader(dataset=val_dataset,
                               batch_size=config['batch_size'],
                               shuffle=False,
                               num_workers=config['num_workers'],
                               pin_memory=True,
                               collate_fn=lambda x: collate_superv(x, max_len=model.max_len))
-    dataset_class, collate_fn, runner_class = pipeline_factory(config)
+    
     trainer = runner_class(model, train_loader, device, loss_module, optimizer, l2_reg=output_reg,
                                  print_interval=config['print_interval'], console=config['console'])
-    tester  = runner_class(model, test_loader, device, loss_module,
+    val_evaluator  = runner_class(model, val_loader, device, loss_module,
                                  print_interval=config['print_interval'], console=config['console'])
 
     tensorboard_writer = SummaryWriter(config['tensorboard_dir'])
@@ -152,7 +181,7 @@ def main(config):
     best_metrics = {}
 
     # Evaluate on validation before training
-    aggr_metrics_val, best_metrics, best_value = validate(tester, tensorboard_writer, config, best_metrics,
+    aggr_metrics_val, best_metrics, best_value = validate(val_evaluator, tensorboard_writer, config, best_metrics,
                                                           best_value, epoch=0)
     metrics_names, metrics_values = zip(*aggr_metrics_val.items())
     metrics.append(list(metrics_values))
@@ -180,11 +209,8 @@ def main(config):
 
         # evaluate if first or last epoch or at specified interval
         if (epoch == config["epochs"]) or (epoch == start_epoch + 1) or (epoch % config['val_interval'] == 0):
-            aggr_metrics_val, best_metrics, best_value = validate(test_evaluator, tensorboard_writer, config,
+            aggr_metrics_val, best_metrics, best_value = validate(val_evaluator, tensorboard_writer, config,
                                                                   best_metrics, best_value, epoch)
-            if last_best_val != best_value:
-                aggr_metrics_test, per_batch_test = test_evaluator.evaluate(keep_all=True)
-                last_best_val = best_value
             metrics_names, metrics_values = zip(*aggr_metrics_val.items())
             metrics.append(list(metrics_values))
 
@@ -208,11 +234,11 @@ def main(config):
     # Export evolution of metrics over epochs
     header = metrics_names
     metrics_filepath = os.path.join(config["output_dir"], "metrics_" + config["experiment_name"] + ".xls")
-    # book = utils.export_performance_metrics(metrics_filepath, metrics, header, sheet_name="metrics")
+    book = utils.export_performance_metrics(metrics_filepath, metrics, header, sheet_name="metrics")
 
     # Export record metrics to a file accumulating records from all experiments
-    # utils.register_record(config["records_file"], config["initial_timestamp"], config["experiment_name"],
-    #                       best_metrics, aggr_metrics_val, comment=config['comment'])
+    utils.register_record(config["records_file"], config["initial_timestamp"], config["experiment_name"],
+                          best_metrics, aggr_metrics_val, comment=config['comment'])
 
     logger.info('Best {} was {}. Other metrics: {}'.format(config['key_metric'], best_value, best_metrics))
     logger.info('All Done!')
@@ -220,7 +246,7 @@ def main(config):
     total_runtime = time.time() - total_start_time
     logger.info("Total runtime: {} hours, {} minutes, {} seconds\n".format(*utils.readable_time(total_runtime)))
 
-    return best_value, aggr_metrics_test['loss']
+    return best_value
 
 if __name__ == '__main__':
 

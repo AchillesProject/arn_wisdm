@@ -208,7 +208,9 @@ def validate(val_evaluator, tensorboard_writer, config, best_metrics, best_value
         tensorboard_writer.add_scalar('{}/val'.format(k), v, epoch)
         print_str += '{}: {:8f} | '.format(k, v)
     logger.info(print_str)
-
+    targets_len = np.unique(np.array([len(target) for target in per_batch['targets']]))
+    print(targets_len)
+   
     if config['key_metric'] in NEG_METRICS:
         condition = (aggr_metrics[config['key_metric']] < best_value)
     else:
@@ -334,7 +336,7 @@ class UnsupervisedRunner(BaseRunner):
             targets = targets.to(self.device)
             target_masks = target_masks.to(self.device)  # 1s: mask and predict, 0s: unaffected input (ignore)
             padding_masks = padding_masks.to(self.device)  # 0s: ignore
-
+           
             # TODO: for debugging
             # input_ok = utils.check_tensor(X, verbose=False, zero_thresh=1e-8, inf_thresh=1e4)
             # if not input_ok:
@@ -413,7 +415,6 @@ class SupervisedRunner(BaseRunner):
 
             # Zero gradients, perform a backward pass, and update the weights.
             self.optimizer.zero_grad()
-            #print("HHHHHHEEEELLLLLOOOO THEREEEE", X.type(), targets.type(), total_loss.type())
             total_loss.backward()
 
             # torch.nn.utils.clip_grad_value_(self.model.parameters(), clip_value=1.0)
@@ -441,7 +442,7 @@ class SupervisedRunner(BaseRunner):
         epoch_loss = 0  # total loss of epoch
         total_samples = 0  # total samples in epoch
 
-        per_batch = {'target_masks': [], 'targets': [], 'predictions': [], 'metrics': [], 'IDs': []}
+        per_batch = {'targets': [], 'predictions': [], 'metrics': [], 'IDs': []}
         for i, batch in enumerate(self.dataloader):
             X, targets, padding_masks, IDs = batch
             targets = targets.to(self.device).type(torch.cuda.FloatTensor)
@@ -451,7 +452,10 @@ class SupervisedRunner(BaseRunner):
             loss = self.loss_module(predictions, targets).type(torch.cuda.FloatTensor)  # (batch_size,) loss for each sample in the batch
             batch_loss = torch.sum(loss).cpu().item()
             mean_loss = batch_loss / len(loss)  # mean loss (over samples)
-
+            # print(targets, len(targets), targets.size())
+            # print(predictions, len(predictions), predictions.size())
+            # print(loss, len(loss), loss.size())
+            # sys.exit()
             per_batch['targets'].append(targets.cpu().numpy())
             per_batch['predictions'].append(predictions.cpu().detach().numpy())
             per_batch['metrics'].append([loss.cpu().detach().numpy()])
@@ -487,7 +491,6 @@ class SupervisedRunner(BaseRunner):
 
                 prec, rec, _ = sklearn.metrics.precision_recall_curve(targets, probs[:, 1])
                 self.epoch_metrics['AUPRC'] = sklearn.metrics.auc(rec, prec)
-
         if keep_all:
             return self.epoch_metrics, per_batch
         else:

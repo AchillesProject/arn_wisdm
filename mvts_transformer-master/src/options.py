@@ -83,13 +83,6 @@ class Options(object):
         self.parser.add_argument('--subsample_factor', type=int,
                                  help='Sub-sampling factor used for long sequences: keep every kth sample')
         
-        self.parser.add_argument('--cnc_num_classes', type=int, default=1,
-                                 help='[CNC Dataset] Hardcode number of classes. Need to modify the ts_transformer.py file.')
-        self.parser.add_argument('--cnc_num_features', type=int, default=33,
-                                 help='[CNC Dataset] Hardcode number of features. Need to modify the ts_transformer.py file.')
-        
-        self.parser.add_argument('--wisdm_file_no', type=int, default=1,
-                                 help='[WISDM Dataset] Train/test file number. [1-30]')
         # Training process
         self.parser.add_argument('--task', choices={"imputation", "transduction", "classification", "regression"},
                                  default="imputation",
@@ -170,8 +163,32 @@ class Options(object):
                                  help='Activation to be used in transformer encoder')
         self.parser.add_argument('--normalization_layer', choices={'BatchNorm', 'LayerNorm'}, default='BatchNorm',
                                  help='Normalization layer to be used internally in transformer encoder')
-        self.parser.add_argument('--cnc_signal', choices={'first', 'second'}, default='first',
-                                 help='CNC dataset output signal')
+        
+        # Additional options for specific datasets
+        
+        ### CNC Dataset (added by Hoa Nguyen [HIOF/IFE])
+        self.parser.add_argument('--cnc_num_classes', type=int, default=1,
+                                 help='[CNC Dataset] Hardcode number of classes. Need to modify the ts_transformer.py.')
+        self.parser.add_argument('--cnc_num_features', type=int, default=33,
+                                 help='[CNC Dataset] Hardcode number of features. Need to modify the ts_transformer.py.')
+        self.parser.add_argument('--cnc_signal', choices={'first', 'second'}, default='first', help='CNC dataset output signal')
+        ### WISDM Dataset (added by Chau Tran [HIOF/IFE])
+        self.parser.add_argument('--wisdm_file_no', type=int, default=1,
+                                 help='[WISDM Dataset] Train/test file number. [1-30]')
+        self.parser.add_argument('--wisdm_numTrainingSteps', type=int, default=320000,
+                                 help='[WISDM Dataset] Total number of training steps. It is used for calculating the epochs number when training WISDM dataset.' )
+        self.parser.add_argument('--wisdm_beta1', type=float, default=0.974833,
+                                 help='[WISDM Dataset] Variables of learning scheduler.')
+        self.parser.add_argument('--wisdm_beta2', type=float, default=0.996890,
+                                 help='[WISDM Dataset] Variables of learning scheduler.')
+        self.parser.add_argument('--wisdm_epsilon', type=float, default=0.003880,
+                                 help='[WISDM Dataset] Variables of learning scheduler.')
+        self.parser.add_argument('--wisdm_lr0', type=float, default=0.002798,
+                                 help='[WISDM Dataset] Initial learning rate of learning scheduler.')
+        self.parser.add_argument('--wisdm_decayDurationFactor', type=float, default=0.979079,
+                                 help='[WISDM Dataset] Variables of learning scheduler.')
+        self.parser.add_argument('--wisdm_learningRateDecay', type=float, default=0.001025,
+                                 help='[WISDM Dataset] Train/test file number. [1-30]')
 
     def parse(self):
 
