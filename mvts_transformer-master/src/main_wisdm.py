@@ -122,7 +122,7 @@ def main(config):
     start_epoch = 0
     lr_step = 0  # current step index of `lr_step`
     lr = config['wisdm_lr0']  # initial learning rate (lr0)
-    lr_T = int(config['wisdm_decayDuration'])*float(int(config['wisdm_numTrainingSteps'])/int(config['batchSize'])) # total timesteps
+    lr_T = int(config['wisdm_decayDuration'])*float(int(config['wisdm_numTrainingSteps'])/int(config['batch_size'])) # total timesteps
     config["epochs"]   = int(math.floor(int(config['wisdm_numTrainingSteps'])*int(config['data_window_len']) / len(train_indices)))
     print(config['epochs'], lr_T)
     # Load model and optimizer state
