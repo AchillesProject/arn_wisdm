@@ -123,7 +123,6 @@ def main(config):
     start_epoch = 0
     lr_step = 0  # current step index of `lr_step`
     lr = config['wisdm_lr0']  # initial learning rate (lr0)
-    
     config["epochs"]   = int(math.floor(int(config['wisdm_numTrainingSteps'])*int(config['data_window_len']) / len(train_indices)))
     print(config['epochs'], lr_T)
     # Load model and optimizer state
@@ -197,7 +196,7 @@ def main(config):
         aggr_metrics_train = trainer.train_epoch(epoch)  # dictionary of aggregate epoch metrics
         epoch_runtime = time.time() - epoch_start_time
         print()
-        print_str = f'Epoch {epoch} Training Summary: '
+        print_str = f'Epoch {int(epoch)} Training Summary: '
         for k, v in aggr_metrics_train.items():
             tensorboard_writer.add_scalar(f'{k}/train', v, epoch)
             print_str += '{}: {:8f} | '.format(k, v)

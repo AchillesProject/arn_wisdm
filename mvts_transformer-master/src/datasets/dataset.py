@@ -146,7 +146,7 @@ class ClassiregressionDataset(Dataset):
         X = self.feature_df.loc[self.IDs[ind]].values  # (seq_length, feat_dim) array
         y = self.labels_df.loc[self.IDs[ind]].values  # (num_labels,) array
         # print(ind, self.IDs[ind], X.shape, torch.from_numpy(X).shape, y.shape, np.squeeze(y).shape, torch.from_numpy(np.squeeze(y)).shape)
-        return torch.from_numpy(X), torch.from_numpy(np.squeeze(y)), self.IDs[ind] #self.IDs[ind] and ind are the same
+        return torch.from_numpy(X), torch.from_numpy(y), self.IDs[ind] #self.IDs[ind] and ind are the same
 
     def __len__(self):
         return len(self.IDs)
