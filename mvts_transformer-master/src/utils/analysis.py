@@ -423,6 +423,7 @@ class Analyzer(object):
 
         self.existing_class_ind = sorted(list(in_pred_labels | in_true_labels))
         class_strings = [str(name) for name in class_names]  # needed in case `class_names` elements are not strings
+        [print(ind) for ind in self.existing_class_ind if type(ind) is not int]
         self.existing_class_names = [class_strings[ind][:min(self.maxcharlength, len(class_strings[ind]))] for ind in
                                      self.existing_class_ind]  # a little inefficient but inconsequential
 

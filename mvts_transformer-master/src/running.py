@@ -480,7 +480,7 @@ class SupervisedRunner(BaseRunner):
             probs = probs.cpu().numpy()
             targets = np.concatenate(per_batch['targets'], axis=0).flatten()
             class_names = np.arange(probs.shape[1])  # TODO: temporary until I decide how to pass class names
-            metrics_dict = self.analyzer.analyze_classification(predictions, targets, class_names)
+            metrics_dict = self.analyzer.analyze_classification(predictions.astype(int), targets.astype(int), class_names)
 
             self.epoch_metrics['accuracy'] = metrics_dict['total_accuracy']  # same as average recall over all classes
             self.epoch_metrics['precision'] = metrics_dict['prec_avg']  # average precision over all classes

@@ -59,8 +59,7 @@ def main(config):
     logger.info("Loading and preprocessing data ...")
     data_class         = data_factory[config['data_class']]
     config['data_dir'] = f"{config['data_dir']}/run{config['wisdm_file_no']}"
-    lr_T = float(config['wisdm_decayDuration'])*float(int(config['wisdm_numTrainingSteps'])/int(config['batch_size'])) # total steps
-    print(config['epochs'], lr_T)
+    
     # Train Data
     train_data    = data_class(config['data_dir'], pattern='TRAIN', n_proc=config['n_proc'], limit_size=config['limit_size'], config=config)
     train_indices = train_data.all_IDs
@@ -122,8 +121,9 @@ def main(config):
 
     start_epoch = 0
     lr_step = 0  # current step index of `lr_step`
-    lr = config['wisdm_lr0']  # initial learning rate (lr0)
-    config["epochs"]   = int(math.floor(int(config['wisdm_numTrainingSteps'])*int(config['data_window_len']) / len(train_indices)))
+    lr      = config['wisdm_lr0']  # initial learning rate (lr0)
+    config["epochs"]   = int(math.floor(config['wisdm_numTrainingSteps']*config['data_window_len'] / len(train_indices)))
+    lr_T = int(config['wisdm_decayDuration']*float(config['wisdm_numTrainingSteps']/config['batch_size'])) # total steps
     print(config['epochs'], lr_T)
     # Load model and optimizer state
     if args.load_model:
@@ -190,7 +190,7 @@ def main(config):
 
     logger.info('Starting training...')
     
-    for int(epoch) in tqdm(range(start_epoch + 1, config["epochs"] + 1), desc='Training Epoch', leave=False):
+    for epoch in tqdm(range(start_epoch + 1, config["epochs"] + 1), desc='Training Epoch', leave=False):
         mark = epoch if config['save_all'] else 'last'
         epoch_start_time = time.time()
         aggr_metrics_train = trainer.train_epoch(epoch)  # dictionary of aggregate epoch metrics
@@ -225,7 +225,7 @@ def main(config):
                 lr = config['wisdm_lrDecay'] * config['wisdm_lr0']
             else:
                 lr = config['wisdm_lr0'] - (1.0-config['wisdm_lrDecay'])*config['wisdm_lr0']*epoch/lr_T
-            logger.info('[WISDM ] Learning rate updated to: ', lr)
+            logger.info('[WISDM ] Learning rate updated to: {}'.format(lr))
             for param_group in optimizer.param_groups:
                 param_group['lr'] = lr
         else:
@@ -234,7 +234,7 @@ def main(config):
                 lr = lr * config['lr_factor'][lr_step]
                 if lr_step < len(config['lr_step']) - 1:  # so that this index does not get out of bounds
                     lr_step += 1
-                logger.info('Learning rate updated to: ', lr)
+                logger.info('Learning rate updated to: {}'.format(lr))
                 for param_group in optimizer.param_groups:
                     param_group['lr'] = lr
 
