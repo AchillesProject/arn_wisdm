@@ -250,7 +250,7 @@ def main(config):
     book = utils.export_performance_metrics(metrics_filepath, metrics, header, sheet_name="metrics")
 
     # Export record metrics to a file accumulating records from all experiments
-    utils.register_record(str(config["wisdm_file_no"]), config["records_file"], config["initial_timestamp"], config["experiment_name"], best_metrics, aggr_metrics_val, comment=config['comment'], file_no=config['wisdm_file_no'])
+    utils.register_record(config["records_file"], config["initial_timestamp"], config["experiment_name"], best_metrics, aggr_metrics_val, comment=config['comment'], file_no=str(config['wisdm_file_no']))
 
     logger.info('Best {} was {}. Other metrics: {}'.format(config['key_metric'], best_value, best_metrics))
     logger.info('All Done!')
