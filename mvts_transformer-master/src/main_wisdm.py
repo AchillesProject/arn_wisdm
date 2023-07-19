@@ -57,7 +57,7 @@ def main(config):
     logger.info("Device index: {}".format(torch.cuda.current_device())) if device == 'cuda' else None
     
     logger.info("Loading and preprocessing data ...")
-    data_class         = data_factory[config['data_class']]
+    data_class         = data_factory[config['data_class']]   #WISDMData
     config['data_dir'] = f"{config['data_dir']}/run{config['wisdm_file_no']}"
     
     # Train Data
@@ -85,11 +85,11 @@ def main(config):
                        'test_indices': list(test_indices)}, f, indent=4)
     
     # Pre-process features
-    if config['normalization'] is not None:
-        normalizer = Normalizer(config['normalization'])
-        train_data.feature_df.loc[train_indices] = normalizer.normalize(train_data.feature_df.loc[train_indices])
-        val_data.feature_df.loc[val_indices]   = normalizer.normalize(val_data.feature_df.loc[val_indices])
-        test_data.feature_df.loc[test_indices]   = normalizer.normalize(test_data.feature_df.loc[test_indices])
+    # if config['normalization'] is not None:
+    #     normalizer = Normalizer(config['normalization'])
+    #     train_data.feature_df.loc[train_indices] = normalizer.normalize(train_data.feature_df.loc[train_indices])
+    #     val_data.feature_df.loc[val_indices]     = normalizer.normalize(val_data.feature_df.loc[val_indices])
+    #     test_data.feature_df.loc[test_indices]   = normalizer.normalize(test_data.feature_df.loc[test_indices])
 
     # Create model
     logger.info("Creating model ...")
@@ -122,9 +122,8 @@ def main(config):
     start_epoch = 0
     lr_step = 0  # current step index of `lr_step`
     lr      = config['wisdm_lr0']  # initial learning rate (lr0)
-    config["epochs"]   = int(math.floor(config['wisdm_numTrainingSteps']*config['data_window_len'] / len(train_indices)))
+    config["epochs"]   = int(math.floor(config['wisdm_numTrainingSteps'] / len(train_indices)))
     lr_T = int(config['wisdm_decayDuration']*float(config['wisdm_numTrainingSteps']/config['batch_size'])) # total steps
-    print(config['epochs'], lr_T)
     # Load model and optimizer state
     if args.load_model:
         model, optimizer, start_epoch = utils.load_model(model, config['load_model'], optimizer, config['resume'],
@@ -138,8 +137,7 @@ def main(config):
     if config['test_only'] == 'testset':  # Only evaluate and skip training
         dataset_class, collate_fn, runner_class = pipeline_factory(config)
         test_dataset = dataset_class(test_data, test_indices)
-
-        test_loader = DataLoader(dataset=test_dataset,
+        test_loader  = DataLoader(dataset=test_dataset,
                                  batch_size=config['batch_size'],
                                  shuffle=False,
                                  num_workers=config['num_workers'],
@@ -156,12 +154,14 @@ def main(config):
     
     # Initialize data generators
     dataset_class, collate_fn, runner_class = pipeline_factory(config)
-    train_dataset = dataset_class(train_data, train_indices)
-    train_loader = DataLoader(dataset=train_dataset,
+    train_dataset = dataset_class(train_data, train_indices)  # ClassiregressionDataset
+    print('class train_dataset: ', len(train_dataset))
+    train_loader  = DataLoader(dataset=train_dataset,
                               batch_size=config['batch_size'],
-                              shuffle=False,
+                              shuffle=True,
                               num_workers=config['num_workers'],
                               pin_memory=True,
+                              # drop_last =True,
                               collate_fn=lambda x: collate_superv(x, max_len=model.max_len))
     val_dataset = dataset_class(val_data, val_indices)
     val_loader  = DataLoader(dataset=val_dataset,
@@ -169,9 +169,10 @@ def main(config):
                               shuffle=False,
                               num_workers=config['num_workers'],
                               pin_memory=True,
+                              # drop_last =True,
                               collate_fn=lambda x: collate_superv(x, max_len=model.max_len))
     
-    trainer = runner_class(model, train_loader, device, loss_module, optimizer, l2_reg=output_reg,
+    trainer        = runner_class(model, train_loader, device, loss_module, optimizer, l2_reg=output_reg,
                                  print_interval=config['print_interval'], console=config['console'])
     val_evaluator  = runner_class(model, val_loader, device, loss_module,
                                  print_interval=config['print_interval'], console=config['console'])
@@ -264,5 +265,4 @@ if __name__ == '__main__':
 
     args = Options().parse()  # `argsparse` object
     config = setup(args)  # configuration dictionary
-    print(config)
     main(config)

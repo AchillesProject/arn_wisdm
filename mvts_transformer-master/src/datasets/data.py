@@ -486,11 +486,11 @@ class WISDMData(BaseData):
         
         IDs          = [i // self.max_seq_len for i in range(self.all_df.shape[0] * self.max_seq_len)]
         self.all_df  = pd.DataFrame(np.concatenate((x, y.reshape(-1,1)), axis=1), index=IDs)
-        self.all_IDs = IDs
+        self.all_IDs = list(set(IDs))
         
         self.feature_df = pd.DataFrame(x, index=IDs)
         
-        print('Processed data shape: ', self.all_df.shape, self.feature_df.shape, self.labels_df.shape, len(IDs))
+        print('Processed data shape: ', self.all_df.shape, self.feature_df.shape, self.labels_df.shape, len(self.all_IDs))
         
 
     def load_all(self, root_dir, file_list=None, pattern=None):

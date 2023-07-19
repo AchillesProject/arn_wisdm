@@ -125,12 +125,10 @@ class ClassiregressionDataset(Dataset):
         self.IDs = indices  # list of data IDs, but also mapping between integer index and ID
         
         # self.feature_df = self.data.feature_df.loc[self.IDs] #original code
-        # self.labels_df = self.data.labels_df.loc[self.IDs] #original code
+        # self.labels_df  = self.data.labels_df.loc[self.IDs] #original code
         
         self.feature_df = self.data.feature_df.loc[np.unique(self.IDs).tolist()] # modify for wisdm dataset
-        self.labels_df = self.data.labels_df.loc[np.unique(self.IDs).tolist()]   # modify for wisdm dataset
-        print(self.feature_df.shape)
-        print(self.labels_df.shape)
+        self.labels_df  = self.data.labels_df.loc[np.unique(self.IDs).tolist()]   # modify for wisdm dataset
 
     def __getitem__(self, ind):
         """

@@ -33,7 +33,6 @@ def model_factory(config, data):
 
     if (task == "classification") or (task == "regression"):
         num_labels = len(data.class_names) if task == "classification" else data.labels_df.shape[1]  # dimensionality of labels
-        print('class_names', num_labels)
         if config['model'] == 'LINEAR':
             return DummyTSTransformerEncoderClassiregressor(feat_dim, max_seq_len, config['d_model'],
                                                             config['num_heads'],

@@ -209,7 +209,6 @@ def validate(val_evaluator, tensorboard_writer, config, best_metrics, best_value
         print_str += '{}: {:8f} | '.format(k, v)
     logger.info(print_str)
     targets_len = np.unique(np.array([len(target) for target in per_batch['targets']]))
-    print(targets_len)
    
     if config['key_metric'] in NEG_METRICS:
         condition = (aggr_metrics[config['key_metric']] < best_value)
@@ -221,6 +220,11 @@ def validate(val_evaluator, tensorboard_writer, config, best_metrics, best_value
         best_metrics = aggr_metrics.copy()
 
         pred_filepath = os.path.join(config['pred_dir'], 'best_predictions')
+        per_batch['targets'] = np.array([item.astype(object) for item in per_batch['targets']], dtype=object)
+        per_batch['predictions'] = np.array([item.astype(object) for item in per_batch['predictions']], dtype=object)
+        per_batch['metrics'] = np.array(per_batch['metrics'], dtype=object)
+        per_batch['IDs'] = np.array(per_batch['IDs'], dtype=object)
+        
         np.savez(pred_filepath, **per_batch)
 
     return aggr_metrics, best_metrics, best_value
@@ -403,7 +407,6 @@ class SupervisedRunner(BaseRunner):
             padding_masks = padding_masks.to(self.device)  # 0s: ignore
             # regression: (batch_size, num_labels); classification: (batch_size, num_classes) of logits
             predictions = self.model(X.to(self.device), padding_masks)
-
             loss = self.loss_module(predictions, targets).type(torch.cuda.FloatTensor)  # (batch_size,) loss for each sample in the batch
             batch_loss = torch.sum(loss)
             mean_loss = batch_loss / len(loss)  # mean loss (over samples) used for optimization
@@ -445,6 +448,7 @@ class SupervisedRunner(BaseRunner):
         per_batch = {'targets': [], 'predictions': [], 'metrics': [], 'IDs': []}
         for i, batch in enumerate(self.dataloader):
             X, targets, padding_masks, IDs = batch
+            
             targets = targets.to(self.device).type(torch.cuda.FloatTensor)
             padding_masks = padding_masks.to(self.device)  # 0s: ignore
             # regression: (batch_size, num_labels); classification: (batch_size, num_classes) of logits
@@ -452,10 +456,7 @@ class SupervisedRunner(BaseRunner):
             loss = self.loss_module(predictions, targets).type(torch.cuda.FloatTensor)  # (batch_size,) loss for each sample in the batch
             batch_loss = torch.sum(loss).cpu().item()
             mean_loss = batch_loss / len(loss)  # mean loss (over samples)
-            # print(targets, len(targets), targets.size())
-            # print(predictions, len(predictions), predictions.size())
-            # print(loss, len(loss), loss.size())
-            # sys.exit()
+
             per_batch['targets'].append(targets.cpu().numpy())
             per_batch['predictions'].append(predictions.cpu().detach().numpy())
             per_batch['metrics'].append([loss.cpu().detach().numpy()])
