@@ -265,12 +265,14 @@ if __name__ == '__main__':
     args = Options().parse()  # `argsparse` object
     config = setup(args)  # configuration dictionary
     results_record = []
+    data_dir = config['data_dir']
     for file_no in range(1,31):
         result = {}
-        config['wisdm_file_no'] = file_no
+        config['wisdm_file_no']  = file_no
+        config['data_dir']       = data_dir
         best_value, best_metrics = main(config)
-        result['best_value'] = best_value
-        result['best_metrics'] = best_metrics
+        result['best_value']     = best_value
+        result['best_metrics']   = best_metrics
         results_record.append(result)
     
     print(results_record)
