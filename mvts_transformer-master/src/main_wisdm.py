@@ -246,12 +246,11 @@ def main(config):
 
     # Export evolution of metrics over epochs
     header = metrics_names
-    metrics_filepath = os.path.join(config["output_dir"], "metrics_" + config["experiment_name"] + config["wisdm_file_no"] + ".xls")
+    metrics_filepath = os.path.join(config["output_dir"], "metrics_" + config["experiment_name"] + str(config["wisdm_file_no"]) + ".xls")
     book = utils.export_performance_metrics(metrics_filepath, metrics, header, sheet_name="metrics")
 
     # Export record metrics to a file accumulating records from all experiments
-    utils.register_record(config["records_file"], config["initial_timestamp"], config["experiment_name"],
-                          best_metrics, aggr_metrics_val, comment=config['comment'])
+    utils.register_record(str(config["wisdm_file_no"]), config["records_file"], config["initial_timestamp"], config["experiment_name"], best_metrics, aggr_metrics_val, comment=config['comment'])
 
     logger.info('Best {} was {}. Other metrics: {}'.format(config['key_metric'], best_value, best_metrics))
     logger.info('All Done!')
