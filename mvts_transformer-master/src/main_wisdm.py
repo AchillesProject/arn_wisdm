@@ -246,7 +246,7 @@ def main(config):
 
     # Export evolution of metrics over epochs
     header = metrics_names
-    metrics_filepath = os.path.join(config["output_dir"], "metrics_" + config["experiment_name"] + ".xls")
+    metrics_filepath = os.path.join(config["output_dir"], "metrics_" + config["experiment_name"] + config["wisdm_file_no"] + ".xls")
     book = utils.export_performance_metrics(metrics_filepath, metrics, header, sheet_name="metrics")
 
     # Export record metrics to a file accumulating records from all experiments
@@ -259,10 +259,19 @@ def main(config):
     total_runtime = time.time() - total_start_time
     logger.info("Total runtime: {} hours, {} minutes, {} seconds\n".format(*utils.readable_time(total_runtime)))
 
-    return best_value
+    return best_value, best_metrics
 
 if __name__ == '__main__':
 
     args = Options().parse()  # `argsparse` object
     config = setup(args)  # configuration dictionary
-    main(config)
+    results_record = []
+    for file_no in range(1,31):
+        result = {}
+        config['wisdm_file_no'] = file_no
+        best_value, best_metrics = main(config)
+        result['best_value'] = best_value
+        result['best_metrics'] = best_metrics
+        results_record.append(result)
+    
+    print(results_record)
