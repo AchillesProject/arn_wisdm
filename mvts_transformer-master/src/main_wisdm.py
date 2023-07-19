@@ -85,11 +85,11 @@ def main(config):
                        'test_indices': list(test_indices)}, f, indent=4)
     
     # Pre-process features
-    # if config['normalization'] is not None:
-    #     normalizer = Normalizer(config['normalization'])
-    #     train_data.feature_df.loc[train_indices] = normalizer.normalize(train_data.feature_df.loc[train_indices])
-    #     val_data.feature_df.loc[val_indices]     = normalizer.normalize(val_data.feature_df.loc[val_indices])
-    #     test_data.feature_df.loc[test_indices]   = normalizer.normalize(test_data.feature_df.loc[test_indices])
+    if config['normalization'] is not None:
+        normalizer = Normalizer(config['normalization'])
+        train_data.feature_df.loc[train_indices] = normalizer.normalize(train_data.feature_df.loc[train_indices])
+        val_data.feature_df.loc[val_indices]     = normalizer.normalize(val_data.feature_df.loc[val_indices])
+        test_data.feature_df.loc[test_indices]   = normalizer.normalize(test_data.feature_df.loc[test_indices])
 
     # Create model
     logger.info("Creating model ...")
